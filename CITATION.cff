@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this code or the derived outputs, please cite the associated manuscript."
+title: "Altered early resting R-locked EEG field expression in bipolar depression: A comparison of patients, unaffected siblings, and healthy controls"
+authors:
+  - family-names: Sosnik
+    given-names: Ronen
+  - family-names: Pouchon
+    given-names: Arnaud
+  - family-names: Bertrand
+    given-names: Antoine
+  - family-names: Linder
+    given-names: Muli
+  - family-names: Polosan
+    given-names: Mircea
+version: 0.1.0
+date-released: 2026-06-22
+repository-code: "https://github.com/<USER_OR_ORG>/bd-rlocked-eeg-field-paper"
+abstract: "MATLAB code and paper-facing outputs for a passive resting EEG/ECG R-locked field analysis in bipolar depression, unaffected siblings, euthymic bipolar disorder, and healthy controls."
+keywords:
+  - bipolar disorder
+  - EEG
+  - ECG
+  - R-locked EEG
+  - cardio-cortical coupling
+  - heartbeat-locked activity
+license: "LicenseRef-PendingAuthorDecision"

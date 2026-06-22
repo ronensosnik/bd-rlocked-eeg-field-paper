@@ -1,0 +1,28 @@
+# MATLAB temporary and autosave files
+*.asv
+*.m~
+*.mlx~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Raw or locally generated data not intended for GitHub by default
+Data/
+Analysis/
+raw/
+raw_data/
+*.set
+*.fdt
+*.vhdr
+*.vmrk
+*.eeg
+
+# Local logs
+*.log
+
+# Keep derived outputs only after data-sharing review
+# Uncomment the following lines for a public code-only repository:
+# data/derived_subject_level/
+# data/derived_large/
+# data/matlab/
