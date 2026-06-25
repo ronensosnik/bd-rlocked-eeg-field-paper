@@ -1,1 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this code or the derived outputs, please cite the associated manuscript."
+title: "Attenuated early resting heartbeat-locked EEG field expression in bipolar depression"
+type: software
+authors:
+
+* family-names: "Sosnik"
+  given-names: "Ronen"
+* family-names: "Pouchon"
+  given-names: "Arnaud"
+* family-names: "Bertrand"
+  given-names: "Antoine"
+* family-names: "Linder"
+  given-names: "Muli"
+* family-names: "Polosan"
+  given-names: "Mircea"
+  version: "0.1.0"
+  date-released: "2026-06-22"
+  repository-code: "https://github.com/ronensosnik/bd-rlocked-eeg-field-paper"
+  abstract: "MATLAB code and paper-facing outputs for an attenuated early resting heartbeat-locked EEG field expression in bipolar depression."
+  keywords:
+* "bipolar disorder"
+* "EEG"
+* "ECG"
+* "R-locked EEG"
+* "cardio-cortical coupling"
+* "heartbeat-locked activity"
 
