@@ -3,6 +3,7 @@
 This repository accompanies the manuscript:
 
 **Attenuated early resting heartbeat-locked EEG field expression in bipolar depression**
+https://doi.org/10.5281/zenodo.20848431
 
 The repository contains MATLAB analysis code and paper-facing outputs for the resting EEG/ECG R-locked field analysis. The primary endpoint is the 100-200 ms R-locked distributed-field score, computed as a leave-one-subject-out, group-blind topographic projection orthogonalized to the peri-R cardiac-field/topography template.
 
