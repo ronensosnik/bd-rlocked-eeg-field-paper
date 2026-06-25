@@ -1,4 +1,4 @@
-# Altered early resting R-locked EEG field expression in bipolar depression
+# Attenuated early resting heartbeat-locked EEG field expression in bipolar depression
 
 This repository accompanies the manuscript:
 
