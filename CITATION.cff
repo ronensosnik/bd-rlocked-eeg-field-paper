@@ -15,7 +15,7 @@ authors:
 version: 0.1.0
 date-released: 2026-06-22
 repository-code: "https://github.com/ronensosnik/bd-rlocked-eeg-field-paper/tree/main"
-abstract: "MATLAB code and paper-facing outputs for a passive resting EEG/ECG R-locked field analysis in bipolar depression, unaffected siblings, euthymic bipolar disorder, and healthy controls."
+abstract: "MATLAB code and paper-facing outputs for an attenuated early resting heartbeat-locked EEG field expression in bipolar depression."
 keywords:
   - bipolar disorder
   - EEG
