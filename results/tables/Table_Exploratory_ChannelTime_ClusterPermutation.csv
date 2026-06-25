@@ -1,7 +1,0 @@
-ClusterID,Sign,Mass,Size,StartMs,EndMs,PeakT,PeakChannel,Channels,ClusterP_FWER,InferenceTier,Effect,EffectLabel
-2,-1,118.632592631817,44,100,300,-3.71642098180721,P2,Pz|P1|P2|PO3|P4|PO4|CP2,0.0241975802419758,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
-4,1,76.2176644762106,29,140,400,3.57190974789069,FT8,T8|C6|FT8|FT10|FC6|TP8,0.0832916708329167,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
-6,1,7.29630480371486,3,120,160,2.66933326586055,C5,C5,0.957004299570043,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
-5,1,4.34522975292708,2,120,140,2.18768372312989,F5,F5,0.997100289971003,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
-1,-1,4.16008248831556,2,360,360,-2.15187524339892,FC1,FC1|FC3,0.998200179982002,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
-3,1,2.12063150919543,1,300,300,2.12063150919543,FT9,FT9,1,ExploratoryChannelTimeCluster,BD_Depressed_vs_HC,BD Depressed - HC
