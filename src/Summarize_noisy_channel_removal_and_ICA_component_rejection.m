@@ -40,6 +40,9 @@ cfg.restFolderName = "";
 cfg.initialChannelCount = 65;
 cfg.uncleanSuffix = '_rest_processed_unclean_Not_interpolated_Not_referenced.set';
 cfg.finalSuffix = '_rest_processed.set';
+cfg.icaRejectionSidecarSuffix = '_rest_ICARejection.mat';
+cfg.parseICARejectionFromHistory = true;
+cfg.assumeNoPopSubcompMeansZero = true;
 
 cfg.writeOutputs = true;
 
@@ -106,6 +109,7 @@ for g = 1: numel(cfg.groups)
 
         uncleanFile = fullfile(restDir, char(subject + string(cfg.uncleanSuffix)));
         finalFile = fullfile(restDir, char(subject + string(cfg.finalSuffix)));
+        icaRejectionFile = fullfile(restDir, char(subject + string(cfg.icaRejectionSidecarSuffix)));
 
         row = init_subject_row();
         row.RawGroup = rawGroup;
@@ -113,6 +117,7 @@ for g = 1: numel(cfg.groups)
         row.Subject = subject;
         row.UncleanFile = string(uncleanFile);
         row.FinalFile = string(finalFile);
+        row.ICARejectionFile = string(icaRejectionFile);
 
         if exist(uncleanFile, 'file') ~= 2
             row.Status = "MissingUncleanFile";
@@ -148,7 +153,25 @@ for g = 1: numel(cfg.groups)
             row.UncleanRejectFlaggedComponents = get_n_reject_flagged_components(EEGunclean);
             row.FinalRejectFlaggedComponents = get_n_reject_flagged_components(EEGfinal);
 
-            [row.ICAComponentsRemoved, row.ICAComponentsRemovedMethod, methodWarning] = estimate_removed_components(row.UncleanNICAComponents, row.FinalNICAComponents, row.UncleanRejectFlaggedComponents, row.FinalRejectFlaggedComponents);
+            methodWarning = "";
+            [explicitCount, explicitIndices, explicitMethod] = get_explicit_ica_removal_count(EEGfinal, EEGunclean, icaRejectionFile, cfg);
+            row.ExplicitICAComponentsRemoved = explicitCount;
+            row.ExplicitICAComponentIndices = explicitIndices;
+
+            if isfinite(explicitCount)
+                row.ICAComponentsRemoved = explicitCount;
+                row.ICAComponentsRemovedMethod = explicitMethod;
+            else
+                [zeroCount, zeroMethod, zeroWarning] = infer_zero_ica_removal_from_absent_pop_subcomp(EEGfinal, EEGunclean, row.UncleanNICAComponents, cfg);
+
+                if isfinite(zeroCount)
+                    row.ICAComponentsRemoved = zeroCount;
+                    row.ICAComponentsRemovedMethod = zeroMethod;
+                    methodWarning = zeroWarning;
+                else
+                    [row.ICAComponentsRemoved, row.ICAComponentsRemovedMethod, methodWarning] = estimate_removed_components(row.UncleanNICAComponents, row.FinalNICAComponents, row.UncleanRejectFlaggedComponents, row.FinalRejectFlaggedComponents);
+                end
+            end
 
             if strlength(methodWarning) > 0
                 if strlength(row.Warning) > 0
@@ -269,6 +292,7 @@ row.Status = strings(1, 1);
 row.Warning = strings(1, 1);
 row.UncleanFile = strings(1, 1);
 row.FinalFile = strings(1, 1);
+row.ICARejectionFile = strings(1, 1);
 row.UncleanNChannels = NaN;
 row.FinalNChannels = NaN;
 row.NoisyChannelsRemoved = NaN;
@@ -279,6 +303,8 @@ row.UncleanNICAComponents = NaN;
 row.FinalNICAComponents = NaN;
 row.ICAComponentsRemoved = NaN;
 row.ICAComponentsRemovedMethod = strings(1, 1);
+row.ExplicitICAComponentsRemoved = NaN;
+row.ExplicitICAComponentIndices = strings(1, 1);
 row.UncleanRejectFlaggedComponents = NaN;
 row.FinalRejectFlaggedComponents = NaN;
 
@@ -426,22 +452,308 @@ if isfinite(nBefore) && isfinite(nAfter)
     warningText = "Final file has more ICA components than unclean file; component removal could not be inferred from component counts";
 end
 
-if isfinite(nFlagBefore) && nFlagBefore >= 0
-    nRemoved = nFlagBefore;
-    method = "UncleanRejectFlags";
-    return;
-end
-
-if isfinite(nFlagAfter) && nFlagAfter >= 0
+if isfinite(nFlagAfter) && nFlagAfter > 0
     nRemoved = nFlagAfter;
     method = "FinalRejectFlags";
     return;
 end
 
+if isfinite(nFlagBefore) && nFlagBefore > 0
+    nRemoved = nFlagBefore;
+    method = "UncleanRejectFlags";
+    return;
+end
+
 method = "Unavailable";
-warningText = "ICA component removal unavailable: no usable ICA component counts or rejection flags";
+warningText = "ICA component removal unavailable: no explicit removal count, no usable final ICA component count, and no positive ICA rejection flags";
+
+if isfinite(nFlagBefore) && nFlagBefore == 0
+    warningText = warningText + "; unclean-file reject flags were zero and were not treated as evidence of zero removed components";
+end
 
 end
+
+function [nRemoved, indicesText, method] = get_explicit_ica_removal_count(EEGfinal, EEGunclean, sidecarFile, cfg)
+
+nRemoved = NaN;
+indicesText = "";
+method = "";
+
+[nRemoved, indicesText] = count_removed_ics_from_sidecar(sidecarFile);
+
+if isfinite(nRemoved)
+    method = "ICARejectionSidecar";
+    return;
+end
+
+[nRemoved, indicesText] = count_removed_ics_from_eeg_explicit(EEGfinal);
+
+if isfinite(nRemoved)
+    method = "FinalExplicitICARejectionMetadata";
+    return;
+end
+
+[nRemoved, indicesText] = count_removed_ics_from_eeg_explicit(EEGunclean);
+
+if isfinite(nRemoved)
+    method = "UncleanExplicitICARejectionMetadata";
+    return;
+end
+
+if isfield(cfg, 'parseICARejectionFromHistory') && cfg.parseICARejectionFromHistory
+    [nRemoved, indicesText] = count_removed_ics_from_history(EEGfinal);
+
+    if isfinite(nRemoved)
+        method = "FinalHistoryPopSubcomp";
+        return;
+    end
+
+    [nRemoved, indicesText] = count_removed_ics_from_history(EEGunclean);
+
+    if isfinite(nRemoved)
+        method = "UncleanHistoryPopSubcomp";
+        return;
+    end
+end
+
+end
+
+function [nRemoved, indicesText] = count_removed_ics_from_sidecar(sidecarFile)
+
+nRemoved = NaN;
+indicesText = "";
+
+if exist(sidecarFile, 'file') ~= 2
+    return;
+end
+
+try
+    S = load(sidecarFile);
+catch
+    return;
+end
+
+names = fieldnames(S);
+
+for i = 1: numel(names)
+    value = S.(names{i});
+    [nRemoved, indicesText] = count_removed_ics_from_value(value);
+
+    if isfinite(nRemoved)
+        return;
+    end
+end
+
+end
+
+function [nRemoved, indicesText] = count_removed_ics_from_eeg_explicit(EEG)
+
+nRemoved = NaN;
+indicesText = "";
+
+if isempty(EEG)
+    return;
+end
+
+if isfield(EEG, 'etc') && ~isempty(EEG.etc)
+    [nRemoved, indicesText] = count_removed_ics_from_value(EEG.etc);
+
+    if isfinite(nRemoved)
+        return;
+    end
+end
+
+if isfield(EEG, 'reject') && ~isempty(EEG.reject)
+    candidateFields = {'gcompreject', 'rejmanual', 'rejkurt', 'rejskew', 'rejfreq', 'rejconst', 'rejthresh'};
+
+    for f = 1: numel(candidateFields)
+        fn = candidateFields{f};
+
+        if isfield(EEG.reject, fn)
+            x = EEG.reject.(fn);
+            x = double(x(:));
+            idx = find(x > 0 & isfinite(x));
+
+            if ~isempty(idx)
+                nRemoved = numel(idx);
+                indicesText = join_component_indices(idx);
+                return;
+            end
+        end
+    end
+end
+
+end
+
+function [nRemoved, indicesText] = count_removed_ics_from_value(value)
+
+nRemoved = NaN;
+indicesText = "";
+
+if isempty(value)
+    return;
+end
+
+if isnumeric(value) || islogical(value)
+    x = double(value(:));
+    x = x(isfinite(x));
+
+    if isempty(x)
+        return;
+    end
+
+    if islogical(value) || all(ismember(unique(x), [0 1])) && numel(x) > 1
+        idx = find(x > 0);
+        nRemoved = numel(idx);
+        indicesText = join_component_indices(idx);
+    elseif numel(x) == 1
+        nRemoved = x(1);
+        indicesText = "";
+    else
+        idx = unique(round(x(:)))';
+        idx = idx(isfinite(idx) & idx > 0);
+        nRemoved = numel(idx);
+        indicesText = join_component_indices(idx);
+    end
+
+    return;
+end
+
+if istable(value)
+    variableNames = string(value.Properties.VariableNames);
+    candidateNames = ["BadComponents", "badComponents", "BadICs", "badICs", "RejectedComponents", "rejectedComponents", "RemovedComponents", "removedComponents", "componentsToRemove", "compsToRemove", "ICsToRemove", "ManualICs", "manualICs", "NRemovedICAComponents", "nRemovedICAComponents", "ICAComponentsRemoved"];
+
+    for c = 1: numel(candidateNames)
+        idx = find(variableNames == candidateNames(c), 1, 'first');
+
+        if ~isempty(idx)
+            [nRemoved, indicesText] = count_removed_ics_from_value(value.(variableNames(idx)));
+
+            if isfinite(nRemoved)
+                return;
+            end
+        end
+    end
+
+    return;
+end
+
+if isstruct(value)
+    candidateNames = {'NRemovedICAComponents', 'nRemovedICAComponents', 'ICAComponentsRemoved', 'icaComponentsRemoved', 'removedICAComponents', 'RemovedICAComponents', 'removedICs', 'RemovedICs', 'badICs', 'BadICs', 'RejectedICAComponents', 'rejectedICAComponents', 'RejectedComponents', 'rejectedComponents', 'componentsToRemove', 'compsToRemove', 'ICsToRemove', 'ManualICs', 'manualICs'};
+
+    for c = 1: numel(candidateNames)
+        fn = candidateNames{c};
+
+        if isfield(value, fn)
+            [nRemoved, indicesText] = count_removed_ics_from_value(value.(fn));
+
+            if isfinite(nRemoved)
+                return;
+            end
+        end
+    end
+end
+
+end
+
+function [nRemoved, indicesText] = count_removed_ics_from_history(EEG)
+
+nRemoved = NaN;
+indicesText = "";
+
+if isempty(EEG) || ~isfield(EEG, 'history') || isempty(EEG.history)
+    return;
+end
+
+historyText = char(string(EEG.history));
+tokens = regexp(historyText, 'pop_subcomp\s*\([^,]+,\s*\[([^\]]*)\]', 'tokens');
+
+if isempty(tokens)
+    return;
+end
+
+lastToken = tokens{end}{1};
+nums = regexp(lastToken, '[-+]?\d+', 'match');
+
+if isempty(nums)
+    return;
+end
+
+idx = str2double(nums(:));
+idx = idx(isfinite(idx) & idx > 0);
+idx = unique(round(idx(:)))';
+nRemoved = numel(idx);
+indicesText = join_component_indices(idx);
+
+end
+
+function [nRemoved, method, warningText] = infer_zero_ica_removal_from_absent_pop_subcomp(EEGfinal, EEGunclean, nUncleanICAComponents, cfg)
+
+nRemoved = NaN;
+method = "";
+warningText = "";
+
+if ~isfield(cfg, 'assumeNoPopSubcompMeansZero') || ~cfg.assumeNoPopSubcompMeansZero
+    return;
+end
+
+if ~isfinite(nUncleanICAComponents) || nUncleanICAComponents <= 0
+    return;
+end
+
+[finalHasHistory, finalHasPopSubcomp, finalHasPostICAEvidence] = inspect_ica_history_for_zero_removal(EEGfinal);
+[uncleanHasHistory, uncleanHasPopSubcomp, uncleanHasPostICAEvidence] = inspect_ica_history_for_zero_removal(EEGunclean);
+
+if finalHasPopSubcomp || uncleanHasPopSubcomp
+    return;
+end
+
+if finalHasHistory && finalHasPostICAEvidence
+    nRemoved = 0;
+    method = "FinalHistoryNoPopSubcompAssumedZero";
+    warningText = "No pop_subcomp command was found in final-file history despite post-ICA processing evidence; ICA components removed set to zero";
+    return;
+end
+
+if uncleanHasHistory && uncleanHasPostICAEvidence
+    nRemoved = 0;
+    method = "UncleanHistoryNoPopSubcompAssumedZero";
+    warningText = "No pop_subcomp command was found in unclean-file history despite ICA evidence; ICA components removed set to zero";
+    return;
+end
+
+end
+
+function [hasHistory, hasPopSubcomp, hasPostICAEvidence] = inspect_ica_history_for_zero_removal(EEG)
+
+hasHistory = false;
+hasPopSubcomp = false;
+hasPostICAEvidence = false;
+
+if isempty(EEG) || ~isfield(EEG, 'history') || isempty(EEG.history)
+    return;
+end
+
+hasHistory = true;
+historyText = char(string(EEG.history));
+hasPopSubcomp = ~isempty(regexp(historyText, 'pop_subcomp\s*\(', 'once'));
+hasPostICAEvidence = contains(historyText, 'pop_runica') || contains(historyText, 'icaweights') || contains(historyText, 'pop_interp') || contains(historyText, 'pop_reref') || contains(historyText, '_rest_processed_unclean_Not_interpolated_Not_referenced.set');
+
+end
+
+function txt = join_component_indices(idx)
+
+idx = double(idx(:));
+idx = idx(isfinite(idx) & idx > 0);
+
+if isempty(idx)
+    txt = "";
+else
+    txt = strjoin(string(idx(:)'), "|");
+end
+
+end
+
 
 function T = append_rows(T, row)
 
