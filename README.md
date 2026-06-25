@@ -10,9 +10,6 @@ The repository contains MATLAB analysis code and paper-facing outputs for the re
 
 ```text
 src/                 MATLAB analysis scripts
-manuscript/          Manuscript and supplementary material drafts
-results/figures/     Paper figure PDFs
-results/tables/      Paper-facing model, contrast, reliability, and summary tables
 data/                Data-sharing notes and, in the full package only, derived outputs
 docs/                Reproducibility notes, setup instructions, and data dictionary
 ```
@@ -20,7 +17,6 @@ docs/                Reproducibility notes, setup instructions, and data diction
 ## Included scripts
 
 - `src/Rest_RLocked_Field_Analysis.m`: main analysis script, including metric loading, topographic scoring, model fitting, permutation inference, cluster localization, and figure generation.
-- `src/Rest_RLocked_Field_Analysis_from_derived_outputs.m`: repository-oriented version configured to rerun models/figures from derived waveform outputs when those outputs are available under `data/derived_subject_level/`.
 - `src/Summarize_noisy_channel_removal_and_ICA_component_rejection.m`: preprocessing QC summary script for noisy-channel removal and ICA-component rejection.
 
 ## Data availability and privacy
@@ -61,7 +57,7 @@ Then run:
 
 ```matlab
 cd src
-Rest_RLocked_Field_Analysis_from_derived_outputs
+Rest_RLocked_Field_Analysis
 ```
 
 This mode is intended to regenerate statistics and figures from the derived subject/channel/time waveform exports rather than from raw EEGLAB files.
